@@ -29,6 +29,7 @@ namespace WinFormsApp1
 
             lblBrightness.Text = $"Яркость: {tbBrightness.Value}";
             lbContrast.Text = $"Контраст: {contrastBar.Value}";
+            correctionBox.SelectedIndex = -1;
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -111,7 +112,24 @@ namespace WinFormsApp1
             if (contrastBar.Value != 0)
                 ops.Add(new ContrastOperation(contrastBar.Value));
 
+            if (TryGetGradationCorrectionMode(out var correctionMode))
+                ops.Add(new GradationCorrectionOperation(correctionMode));
+
             return ops;
+        }
+
+        private bool TryGetGradationCorrectionMode(out GradationCorrectionMode mode)
+        {
+            mode = GradationCorrectionMode.Linear;
+
+            if (correctionBox.SelectedIndex < 0)
+                return false;
+
+            if (!Enum.IsDefined(typeof(GradationCorrectionMode), correctionBox.SelectedIndex))
+                return false;
+
+            mode = (GradationCorrectionMode)correctionBox.SelectedIndex;
+            return true;
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
@@ -171,9 +189,9 @@ namespace WinFormsApp1
             ApplyPipelineAndShow();
         }
 
-        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        private void correctionBox_SelectedIndexChanged(object sender, EventArgs e)
         {
-
+            ApplyPipelineAndShow();
         }
     }
 }

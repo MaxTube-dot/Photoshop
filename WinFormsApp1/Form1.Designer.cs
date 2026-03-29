@@ -36,7 +36,7 @@
             lblBrightness = new Label();
             contrastBar = new TrackBar();
             lbContrast = new Label();
-            comboBox1 = new ComboBox();
+            correctionBox = new ComboBox();
             label1 = new Label();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)tbBrightness).BeginInit();
@@ -118,16 +118,16 @@
             lbContrast.TabIndex = 7;
             lbContrast.Text = "Контрастность";
             // 
-            // comboBox1
+            // correctionBox
             // 
-            comboBox1.AutoCompleteCustomSource.AddRange(new string[] { "Линейная", "Синусоидальная", "Экспоненциальная", "Логарифмическая" });
-            comboBox1.FormattingEnabled = true;
-            comboBox1.Items.AddRange(new object[] { "Линейная", "Синусоидальная", "Экспоненциальная", "Логирифмическая" });
-            comboBox1.Location = new Point(683, 225);
-            comboBox1.Name = "comboBox1";
-            comboBox1.Size = new Size(183, 23);
-            comboBox1.TabIndex = 8;
-            comboBox1.SelectedIndexChanged += comboBox1_SelectedIndexChanged;
+            correctionBox.AutoCompleteCustomSource.AddRange(new string[] { "Линейная", "Синусоидальная", "Экспоненциальная", "Логарифмическая" });
+            correctionBox.FormattingEnabled = true;
+            correctionBox.Items.AddRange(new object[] { "Линейная", "Синусоидальная", "Экспоненциальная", "Логирифмическая" });
+            correctionBox.Location = new Point(683, 225);
+            correctionBox.Name = "correctionBox";
+            correctionBox.Size = new Size(183, 23);
+            correctionBox.TabIndex = 8;
+            correctionBox.SelectedIndexChanged += correctionBox_SelectedIndexChanged;
             // 
             // label1
             // 
@@ -144,7 +144,7 @@
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(889, 619);
             Controls.Add(label1);
-            Controls.Add(comboBox1);
+            Controls.Add(correctionBox);
             Controls.Add(lbContrast);
             Controls.Add(contrastBar);
             Controls.Add(lblBrightness);
@@ -178,7 +178,7 @@
         private Label lblBrightness;
         private TrackBar contrastBar;
         private Label lbContrast;
-        private ComboBox comboBox1;
+        private ComboBox correctionBox;
         private Label label1;
     }
 }
