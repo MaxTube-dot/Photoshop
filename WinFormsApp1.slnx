@@ -4,5 +4,6 @@
   </Folder>
   <Project Path="ConsoleApp1/ConsoleApp1.csproj" Id="0655ec55-960a-4990-9344-4f7667dbec13" />
   <Project Path="MazeBfsConsole/MazeBfsConsole.csproj" />
+  <Project Path="SingleNeuronConsole/SingleNeuronConsole.csproj" />
   <Project Path="WinFormsApp1/WinFormsApp1.csproj" />
 </Solution>
