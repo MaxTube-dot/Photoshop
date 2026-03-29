@@ -38,9 +38,12 @@
             lbContrast = new Label();
             correctionBox = new ComboBox();
             label1 = new Label();
+            lbGamma = new Label();
+            gammaCor = new TrackBar();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)tbBrightness).BeginInit();
             ((System.ComponentModel.ISupportInitialize)contrastBar).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)gammaCor).BeginInit();
             SuspendLayout();
             // 
             // btnOpen
@@ -138,11 +141,31 @@
             label1.TabIndex = 9;
             label1.Text = "Коррекция";
             // 
+            // lbGamma
+            // 
+            lbGamma.AutoSize = true;
+            lbGamma.Location = new Point(683, 268);
+            lbGamma.Name = "lbGamma";
+            lbGamma.Size = new Size(105, 15);
+            lbGamma.TabIndex = 11;
+            lbGamma.Text = "Гамма коррекция";
+            // 
+            // gammaCor
+            // 
+            gammaCor.Location = new Point(683, 286);
+            gammaCor.Name = "gammaCor";
+            gammaCor.Size = new Size(183, 45);
+            gammaCor.TabIndex = 10;
+            gammaCor.Scroll += gammaCor_Scroll;
+            gammaCor.MouseUp += gammaCor_MouseUp;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(889, 619);
+            Controls.Add(lbGamma);
+            Controls.Add(gammaCor);
             Controls.Add(label1);
             Controls.Add(correctionBox);
             Controls.Add(lbContrast);
@@ -159,6 +182,7 @@
             ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
             ((System.ComponentModel.ISupportInitialize)tbBrightness).EndInit();
             ((System.ComponentModel.ISupportInitialize)contrastBar).EndInit();
+            ((System.ComponentModel.ISupportInitialize)gammaCor).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -180,5 +204,7 @@
         private Label lbContrast;
         private ComboBox correctionBox;
         private Label label1;
+        private Label lbGamma;
+        private TrackBar gammaCor;
     }
 }

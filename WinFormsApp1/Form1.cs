@@ -27,8 +27,14 @@ namespace WinFormsApp1
             contrastBar.TickFrequency = 10;
             contrastBar.Value = 0;
 
+            gammaCor.Minimum = 10;
+            gammaCor.Maximum = 500;
+            gammaCor.TickFrequency = 10;
+            gammaCor.Value = 100;
+
             lblBrightness.Text = $"Яркость: {tbBrightness.Value}";
             lbContrast.Text = $"Контраст: {contrastBar.Value}";
+            lbGamma.Text = $"Гамма: {GetGammaValue():0.00}";
             correctionBox.SelectedIndex = -1;
         }
 
@@ -112,6 +118,10 @@ namespace WinFormsApp1
             if (contrastBar.Value != 0)
                 ops.Add(new ContrastOperation(contrastBar.Value));
 
+            double gamma = GetGammaValue();
+            if (Math.Abs(gamma - 1.0) > double.Epsilon)
+                ops.Add(new GammaCorrectionOperation(gamma));
+
             if (TryGetGradationCorrectionMode(out var correctionMode))
                 ops.Add(new GradationCorrectionOperation(correctionMode));
 
@@ -130,6 +140,11 @@ namespace WinFormsApp1
 
             mode = (GradationCorrectionMode)correctionBox.SelectedIndex;
             return true;
+        }
+
+        private double GetGammaValue()
+        {
+            return gammaCor.Value / 100d;
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
@@ -191,6 +206,17 @@ namespace WinFormsApp1
 
         private void correctionBox_SelectedIndexChanged(object sender, EventArgs e)
         {
+            ApplyPipelineAndShow();
+        }
+
+        private void gammaCor_Scroll(object sender, EventArgs e)
+        {
+            lbGamma.Text = $"Гамма: {GetGammaValue():0.00}";
+        }
+
+        private void gammaCor_MouseUp(object sender, MouseEventArgs e)
+        {
+            lbGamma.Text = $"Гамма: {GetGammaValue():0.00}";
             ApplyPipelineAndShow();
         }
     }
