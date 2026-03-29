@@ -12,35 +12,35 @@ internal static class Program
 
     static string[] symbols = new string[]
     {
-        " ",   // 0 - empty
-        " ",   // 1 - wall (solid color)
-        " ",   // 2 - filled (solid color)
-        ">",   // 3 - right
-        "v",   // 4 - down
-        "<",   // 5 - left
-        "^"    // 6 - up
+        " ",
+        " ", 
+        " ", 
+        ">",  
+        "v",   
+        "<",   
+        "^"    
     };
 
     static ConsoleColor[] fore = new ConsoleColor[]
     {
-        ConsoleColor.Black,      // 0 - empty
-        ConsoleColor.DarkGray,   // 1 - wall
-        ConsoleColor.White,      // 2 - filled
-        ConsoleColor.Red,        // 3 - right
-        ConsoleColor.Green,      // 4 - down
-        ConsoleColor.Cyan,       // 5 - left
-        ConsoleColor.Yellow      // 6 - up
+        ConsoleColor.Black,    
+        ConsoleColor.DarkGray, 
+        ConsoleColor.White,   
+        ConsoleColor.Red,     
+        ConsoleColor.Green,    
+        ConsoleColor.Cyan,      
+        ConsoleColor.Yellow    
     };
 
     static ConsoleColor[] back = new ConsoleColor[]
     {
-        ConsoleColor.Black,      // 0 - empty
-        ConsoleColor.DarkGray,   // 1 - wall
-        ConsoleColor.DarkBlue,   // 2 - filled
-        ConsoleColor.Black,      // 3 - right
-        ConsoleColor.Black,      // 4 - down
-        ConsoleColor.Black,      // 5 - left
-        ConsoleColor.Black       // 6 - up
+        ConsoleColor.Black,   
+        ConsoleColor.DarkGray,  
+        ConsoleColor.DarkBlue,  
+        ConsoleColor.Black,    
+        ConsoleColor.Black,    
+        ConsoleColor.Black,    
+        ConsoleColor.Black    
     };
 
     static int fillDelayMs = 0;
@@ -61,7 +61,7 @@ internal static class Program
 
             Console.ResetColor();
             Console.SetCursorPosition(0, maxy + 1);
-            Console.Write("Press any key to start fill...");
+            Console.Write("Нажми любую клавишу...");
 
             if (!Console.IsInputRedirected)
             {
@@ -79,8 +79,8 @@ internal static class Program
 
             Console.ResetColor();
             Console.SetCursorPosition(0, maxy + 1);
-            Console.WriteLine($"Elapsed: {sw.ElapsedMilliseconds} ms");
-            Console.WriteLine($"Filled cells: {count}");
+            Console.WriteLine($"Время: {sw.ElapsedMilliseconds} ms");
+            Console.WriteLine($"Залито ячеек: {count}");
         }
         finally
         {
@@ -240,7 +240,6 @@ internal static class Program
     {
         Console.OutputEncoding = Encoding.UTF8;
         Console.CursorVisible = false;
-        Console.Title = "Recursive Flood Fill";
 
         if (!OperatingSystem.IsWindows())
         {
