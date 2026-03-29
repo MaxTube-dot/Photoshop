@@ -1,242 +1,297 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Text;
 
 internal static class Program
 {
-    static int maxx = 170;
-    static int maxy = 49;
-    static int count = 0;
-    static Random rnd = new Random(12145);
+    private const int MapWidth = 170;
+    private const int MapHeight = 49;
+    private const int FillDelayMilliseconds = 0;
+    private const int WallColor = 1;
+    private const int FillColor = 2;
+    private const int EnterRightColor = 3;
+    private const int EnterDownColor = 4;
+    private const int EnterLeftColor = 5;
+    private const int EnterUpColor = 6;
+    private const int SafeZoneRadius = 2;
 
-    static int[,] map = new int[maxx, maxy];
-
-    static string[] symbols = new string[]
+    private static readonly Random Randomizer = new(12145);
+    private static readonly int[,] Map = new int[MapWidth, MapHeight];
+    private static readonly string[] Symbols =
     {
         " ",
-        " ", 
-        " ", 
-        ">",  
-        "v",   
-        "<",   
-        "^"    
+        " ",
+        " ",
+        ">",
+        "v",
+        "<",
+        "^"
     };
 
-    static ConsoleColor[] fore = new ConsoleColor[]
+    private static readonly ConsoleColor[] ForegroundColors =
     {
-        ConsoleColor.Black,    
-        ConsoleColor.DarkGray, 
-        ConsoleColor.White,   
-        ConsoleColor.Red,     
-        ConsoleColor.Green,    
-        ConsoleColor.Cyan,      
-        ConsoleColor.Yellow    
+        ConsoleColor.Black,
+        ConsoleColor.DarkGray,
+        ConsoleColor.White,
+        ConsoleColor.Red,
+        ConsoleColor.Green,
+        ConsoleColor.Cyan,
+        ConsoleColor.Yellow
     };
 
-    static ConsoleColor[] back = new ConsoleColor[]
+    private static readonly ConsoleColor[] BackgroundColors =
     {
-        ConsoleColor.Black,   
-        ConsoleColor.DarkGray,  
-        ConsoleColor.DarkBlue,  
-        ConsoleColor.Black,    
-        ConsoleColor.Black,    
-        ConsoleColor.Black,    
-        ConsoleColor.Black    
+        ConsoleColor.Black,
+        ConsoleColor.DarkGray,
+        ConsoleColor.DarkBlue,
+        ConsoleColor.Black,
+        ConsoleColor.Black,
+        ConsoleColor.Black,
+        ConsoleColor.Black
     };
 
-    static int fillDelayMs = 0;
+    private static int _filledCells;
 
-    static void Main()
+    private static void Main()
     {
         try
         {
             PrepareConsole();
             Console.Clear();
 
-            init();
+            InitializeMap();
 
-            int startX = maxx / 2;
-            int startY = maxy / 2;
+            var start = GetStartPoint();
+            HighlightStart(start);
+            WaitForOptionalKeyPress();
+            ClearStartMarker(start);
 
-            show(startX, startY, 3);
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            FloodFill(start.X, start.Y);
+            stopwatch.Stop();
 
-            Console.ResetColor();
-            Console.SetCursorPosition(0, maxy + 1);
-            Console.Write("Нажми любую клавишу...");
-
-            if (!Console.IsInputRedirected)
-            {
-                Console.ReadKey(true);
-            }
-
-            show(startX, startY, 0);
-
-            Console.SetCursorPosition(0, maxy + 1);
-            Console.Write(new string(' ', 40));
-
-            Stopwatch sw = Stopwatch.StartNew();
-            Fill(startX, startY);
-            sw.Stop();
-
-            Console.ResetColor();
-            Console.SetCursorPosition(0, maxy + 1);
-            Console.WriteLine($"Время: {sw.ElapsedMilliseconds} ms");
-            Console.WriteLine($"Залито ячеек: {count}");
+            PrintSummary(stopwatch.ElapsedMilliseconds);
         }
         finally
         {
-            Console.ResetColor();
-            Console.CursorVisible = true;
-            Console.SetCursorPosition(0, maxy + 3);
+            RestoreConsole();
         }
     }
 
-    static void show(int x, int y, int color)
-    {
-        if (!Inside(x, y))
-        {
-            return;
-        }
+    private static (int X, int Y) GetStartPoint() => (MapWidth / 2, MapHeight / 2);
 
-        map[x, y] = color;
-        Console.ForegroundColor = fore[color];
-        Console.BackgroundColor = back[color];
-        Console.SetCursorPosition(x, y);
-        Console.Write(symbols[color]);
+    private static void InitializeMap()
+    {
+        _filledCells = 0;
+
+        ClearMap();
+        DrawFrame();
+        PlaceHorizontalWalls();
+        PlaceVerticalWalls();
+        PlaceRectangles();
+        ClearSafeZone();
+        RedrawMap();
     }
 
-    static void init()
+    private static void ClearMap()
     {
-        count = 0;
-
-        for (int y = 0; y < maxy; y++)
+        for (int y = 0; y < MapHeight; y++)
         {
-            for (int x = 0; x < maxx; x++)
+            for (int x = 0; x < MapWidth; x++)
             {
-                map[x, y] = 0;
+                Map[x, y] = 0;
             }
         }
+    }
 
-        for (int x = 0; x < maxx; x++)
+    private static void DrawFrame()
+    {
+        for (int x = 0; x < MapWidth; x++)
         {
-            map[x, 0] = 1;
-            map[x, maxy - 1] = 1;
+            Map[x, 0] = WallColor;
+            Map[x, MapHeight - 1] = WallColor;
         }
 
-        for (int y = 0; y < maxy; y++)
+        for (int y = 0; y < MapHeight; y++)
         {
-            map[0, y] = 1;
-            map[maxx - 1, y] = 1;
+            Map[0, y] = WallColor;
+            Map[MapWidth - 1, y] = WallColor;
         }
+    }
 
+    private static void PlaceHorizontalWalls()
+    {
         for (int i = 0; i < 90; i++)
         {
-            int x = rnd.Next(1, maxx - 2);
-            int y = rnd.Next(1, maxy - 1);
-            int len = rnd.Next(4, 13);
+            int x = Randomizer.Next(1, MapWidth - 2);
+            int y = Randomizer.Next(1, MapHeight - 1);
+            int length = Randomizer.Next(4, 13);
 
-            for (int dx = 0; dx < len && x + dx < maxx - 1; dx++)
+            for (int dx = 0; dx < length && x + dx < MapWidth - 1; dx++)
             {
-                if (!InsideSafeZone(x + dx, y))
-                {
-                    map[x + dx, y] = 1;
-                }
+                TryPlaceWall(x + dx, y);
             }
         }
+    }
 
+    private static void PlaceVerticalWalls()
+    {
         for (int i = 0; i < 70; i++)
         {
-            int x = rnd.Next(1, maxx - 1);
-            int y = rnd.Next(1, maxy - 2);
-            int len = rnd.Next(3, 10);
+            int x = Randomizer.Next(1, MapWidth - 1);
+            int y = Randomizer.Next(1, MapHeight - 2);
+            int length = Randomizer.Next(3, 10);
 
-            for (int dy = 0; dy < len && y + dy < maxy - 1; dy++)
+            for (int dy = 0; dy < length && y + dy < MapHeight - 1; dy++)
             {
-                if (!InsideSafeZone(x, y + dy))
-                {
-                    map[x, y + dy] = 1;
-                }
+                TryPlaceWall(x, y + dy);
             }
         }
+    }
 
+    private static void PlaceRectangles()
+    {
         for (int i = 0; i < 18; i++)
         {
-            int x = rnd.Next(1, maxx - 6);
-            int y = rnd.Next(1, maxy - 4);
-            int width = rnd.Next(2, 7);
-            int height = rnd.Next(2, 5);
+            int x = Randomizer.Next(1, MapWidth - 6);
+            int y = Randomizer.Next(1, MapHeight - 4);
+            int width = Randomizer.Next(2, 7);
+            int height = Randomizer.Next(2, 5);
 
-            for (int dy = 0; dy < height && y + dy < maxy - 1; dy++)
+            for (int dy = 0; dy < height && y + dy < MapHeight - 1; dy++)
             {
-                for (int dx = 0; dx < width && x + dx < maxx - 1; dx++)
+                for (int dx = 0; dx < width && x + dx < MapWidth - 1; dx++)
                 {
-                    if (!InsideSafeZone(x + dx, y + dy))
-                    {
-                        map[x + dx, y + dy] = 1;
-                    }
+                    TryPlaceWall(x + dx, y + dy);
                 }
-            }
-        }
-
-        for (int y = maxy / 2 - 2; y <= maxy / 2 + 2; y++)
-        {
-            for (int x = maxx / 2 - 2; x <= maxx / 2 + 2; x++)
-            {
-                if (Inside(x, y))
-                {
-                    map[x, y] = 0;
-                }
-            }
-        }
-
-        for (int y = 0; y < maxy; y++)
-        {
-            for (int x = 0; x < maxx; x++)
-            {
-                show(x, y, map[x, y]);
             }
         }
     }
 
-    static void Fill(int x, int y)
+    private static void TryPlaceWall(int x, int y)
     {
-        if (!Inside(x, y))
+        if (!IsInsideSafeZone(x, y))
+        {
+            Map[x, y] = WallColor;
+        }
+    }
+
+    private static void ClearSafeZone()
+    {
+        var start = GetStartPoint();
+
+        for (int y = start.Y - SafeZoneRadius; y <= start.Y + SafeZoneRadius; y++)
+        {
+            for (int x = start.X - SafeZoneRadius; x <= start.X + SafeZoneRadius; x++)
+            {
+                if (IsInsideMap(x, y))
+                {
+                    Map[x, y] = 0;
+                }
+            }
+        }
+    }
+
+    private static void RedrawMap()
+    {
+        for (int y = 0; y < MapHeight; y++)
+        {
+            for (int x = 0; x < MapWidth; x++)
+            {
+                DrawCell(x, y, Map[x, y]);
+            }
+        }
+    }
+
+    private static void HighlightStart((int X, int Y) start) => DrawCell(start.X, start.Y, EnterRightColor);
+
+    private static void ClearStartMarker((int X, int Y) start) => DrawCell(start.X, start.Y, 0);
+
+    private static void DrawCell(int x, int y, int color)
+    {
+        if (!IsInsideMap(x, y))
         {
             return;
         }
 
-        if (map[x, y] > 0)
+        Map[x, y] = color;
+        Console.ForegroundColor = ForegroundColors[color];
+        Console.BackgroundColor = BackgroundColors[color];
+        Console.SetCursorPosition(x, y);
+        Console.Write(Symbols[color]);
+    }
+
+    private static void FloodFill(int x, int y)
+    {
+        if (!CanFill(x, y))
         {
             return;
         }
 
-        show(x, y, 3);
-        Fill(x + 1, y);
+        DrawCell(x, y, EnterRightColor);
+        FloodFill(x + 1, y);
 
-        show(x, y, 4);
-        Fill(x, y + 1);
+        DrawCell(x, y, EnterDownColor);
+        FloodFill(x, y + 1);
 
-        show(x, y, 5);
-        Fill(x - 1, y);
+        DrawCell(x, y, EnterLeftColor);
+        FloodFill(x - 1, y);
 
-        show(x, y, 6);
-        Fill(x, y - 1);
+        DrawCell(x, y, EnterUpColor);
+        FloodFill(x, y - 1);
 
-        show(x, y, 2);
-        Thread.Sleep(fillDelayMs);
-        count++;
+        DrawCell(x, y, FillColor);
+        Thread.Sleep(FillDelayMilliseconds);
+        _filledCells++;
     }
 
-    static bool Inside(int x, int y)
+    private static bool CanFill(int x, int y)
     {
-        return x >= 0 && x < maxx && y >= 0 && y < maxy;
+        if (!IsInsideMap(x, y))
+        {
+            return false;
+        }
+
+        return Map[x, y] == 0;
     }
 
-    static bool InsideSafeZone(int x, int y)
+    private static bool IsInsideMap(int x, int y) => x >= 0 && x < MapWidth && y >= 0 && y < MapHeight;
+
+    private static bool IsInsideSafeZone(int x, int y)
     {
-        return Math.Abs(x - maxx / 2) <= 2 && Math.Abs(y - maxy / 2) <= 2;
+        var start = GetStartPoint();
+        return Math.Abs(x - start.X) <= SafeZoneRadius && Math.Abs(y - start.Y) <= SafeZoneRadius;
     }
 
-    static void PrepareConsole()
+    private static void WaitForOptionalKeyPress()
+    {
+        Console.ResetColor();
+        Console.SetCursorPosition(0, MapHeight + 1);
+        Console.Write("Нажми любую клавишу...");
+
+        if (!Console.IsInputRedirected)
+        {
+            Console.ReadKey(true);
+        }
+    }
+
+    private static void PrintSummary(long elapsedMilliseconds)
+    {
+        Console.ResetColor();
+        Console.SetCursorPosition(0, MapHeight + 1);
+        Console.Write(new string(' ', 40));
+        Console.SetCursorPosition(0, MapHeight + 1);
+        Console.WriteLine($"Время: {elapsedMilliseconds} ms");
+        Console.WriteLine($"Залито ячеек: {_filledCells}");
+    }
+
+    private static void RestoreConsole()
+    {
+        Console.ResetColor();
+        Console.CursorVisible = true;
+        Console.SetCursorPosition(0, MapHeight + 3);
+    }
+
+    private static void PrepareConsole()
     {
         Console.OutputEncoding = Encoding.UTF8;
         Console.CursorVisible = false;
@@ -248,8 +303,8 @@ internal static class Program
 
         try
         {
-            int wantedWidth = Math.Min(maxx + 1, Console.LargestWindowWidth);
-            int wantedHeight = Math.Min(maxy + 4, Console.LargestWindowHeight);
+            int wantedWidth = Math.Min(MapWidth + 1, Console.LargestWindowWidth);
+            int wantedHeight = Math.Min(MapHeight + 4, Console.LargestWindowHeight);
 
             if (Console.BufferWidth < wantedWidth || Console.BufferHeight < wantedHeight)
             {

@@ -10,11 +10,11 @@ namespace WinFormsApp1.Services.ImageOperation
         Logarithmic = 3
     }
 
-    public sealed class GradationCorrectionOperation : IImageOperation
+    public sealed class GradationCorrectionOperation : ColorImageOperationBase
     {
-        private double CorrK = 8 * Math.Log(2) / 255d;
+        private readonly double _correctionFactor = 8 * Math.Log(2) / 255d;
 
-        public string Name => "GradationCorrection";
+        public override string Name => "GradationCorrection";
         public GradationCorrectionMode Mode { get; }
 
         public GradationCorrectionOperation(GradationCorrectionMode mode)
@@ -22,32 +22,7 @@ namespace WinFormsApp1.Services.ImageOperation
             Mode = mode;
         }
 
-        public Bitmap Apply(Bitmap input, CancellationToken token = default)
-        {
-            var output = new Bitmap(input.Width, input.Height);
-            for (int y = 0; y < input.Height; y++)
-            {
-                if (token.IsCancellationRequested)
-                    break;
-
-                for (int x = 0; x < input.Width; x++)
-                {
-                    Color c = input.GetPixel(x, y);
-                    output.SetPixel(
-                        x,
-                        y,
-                        Color.FromArgb(
-                            c.A,
-                            ApplyChannel(c.R),
-                            ApplyChannel(c.G),
-                            ApplyChannel(c.B)));
-                }
-            }
-
-            return output;
-        }
-
-        public void ApplyPixel(ref Color color, CancellationToken token = default)
+        public override void ApplyPixel(ref Color color, CancellationToken token = default)
         {
             color = Color.FromArgb(
                 color.A,
@@ -56,7 +31,7 @@ namespace WinFormsApp1.Services.ImageOperation
                 ApplyChannel(color.B));
         }
 
-        public void ApplyPixel(ref byte b, ref byte g, ref byte r, ref byte a)
+        public override void ApplyPixel(ref byte b, ref byte g, ref byte r, ref byte a)
         {
             r = ApplyChannel(r);
             g = ApplyChannel(g);
@@ -95,7 +70,7 @@ namespace WinFormsApp1.Services.ImageOperation
 
         private int ExponentialCorrection(int color)
         {
-            double result = Math.Exp(CorrK * color) - 1;
+            double result = Math.Exp(_correctionFactor * color) - 1;
 
             if (result < 0) result = 0;
             if (result > 255) result = 255;
@@ -105,7 +80,7 @@ namespace WinFormsApp1.Services.ImageOperation
 
         private int LogarithmicCorrection(int color)
         {
-            double result = Math.Log(color + 1) / CorrK;
+            double result = Math.Log(color + 1) / _correctionFactor;
 
             if (result < 0) result = 0;
             if (result > 255) result = 255;

@@ -1,16 +1,11 @@
 using System;
 using System.Collections.Generic;
 
-struct Box
-{
-    public int x;
-    public int y;
-    public int step;
-}
+internal readonly record struct Box(int X, int Y, int Step);
 
-class Program
+internal static class Program
 {
-    static string[] lab =
+    private static readonly string[] Labyrinth =
     {
         "#########################",
         "    #         #       ###",
@@ -27,142 +22,144 @@ class Program
         "#########################"
     };
 
-    static bool[,] visited;
-    static Box start;
-    static Box finish;
-    static int size_x, size_y;
-    static Queue<Box> boxes;
-
-    static void load()
+    private static readonly (int Dx, int Dy)[] Directions =
     {
-        size_x = lab[0].Length;
-        size_y = lab.Length;
+        (-1, 0),
+        (1, 0),
+        (0, -1),
+        (0, 1)
+    };
 
-        start.x = 0;
-        start.y = 1;
+    private static bool[,] _visited = null!;
+    private static Queue<Box> _frontier = null!;
+    private static int _width;
+    private static int _height;
+    private static Box _start;
+    private static Box _finish;
 
-        finish.x = size_x - 1;
-        finish.y = size_y - 2;
-    }
-
-    static void print()
+    private static void Main()
     {
-        if (!Console.IsOutputRedirected)
-        {
-            Console.Clear();
-        }
+        InitializeMazeInfo();
+        PrintLabyrinth();
 
-        for (int y = 0; y < size_y; y++)
-        {
-            Console.WriteLine(lab[y]);
-        }
-    }
-
-    static void print_box(Box box)
-    {
-        if (Console.IsOutputRedirected)
-        {
-            return;
-        }
-
-        Console.SetCursorPosition(box.x, box.y);
-        Console.ForegroundColor = ConsoleColor.Cyan;
-
-        if (box.step < 10)
-        {
-            Console.Write(box.step);
-        }
-        else
-        {
-            Console.Write((char)(65 + box.step - 10));
-        }
-    }
-
-    static void walk(Box box)
-    {
-        if (box.x < 0 || box.x >= size_x || box.y < 0 || box.y >= size_y)
-        {
-            return;
-        }
-
-        if (lab[box.y][box.x] != ' ')
-        {
-            return;
-        }
-
-        if (visited[box.x, box.y])
-        {
-            return;
-        }
-
-        visited[box.x, box.y] = true;
-        boxes.Enqueue(box);
-        print_box(box);
-    }
-
-    static int search()
-    {
-        visited = new bool[size_x, size_y];
-        boxes = new Queue<Box>();
-
-        start.step = 0;
-        walk(start);
-
-        while (boxes.Count > 0)
-        {
-            Box box = boxes.Dequeue();
-
-            if (box.x == finish.x && box.y == finish.y)
-            {
-                boxes.Clear();
-                return box.step;
-            }
-
-            box.step++;
-
-            box.x--;
-            walk(box);
-            box.x++;
-
-            box.x++;
-            walk(box);
-            box.x--;
-
-            box.y--;
-            walk(box);
-            box.y++;
-
-            box.y++;
-            walk(box);
-            box.y--;
-        }
-
-        return -1;
-    }
-
-    static void Main()
-    {
-        load();
-        print();
-
-        int length = search();
+        int pathLength = SearchShortestPath();
 
         Console.ResetColor();
 
         if (!Console.IsOutputRedirected)
         {
-            Console.SetCursorPosition(0, size_y + 2);
+            Console.SetCursorPosition(0, _height + 2);
         }
         else
         {
             Console.WriteLine();
         }
 
-        Console.WriteLine(length);
+        Console.WriteLine(pathLength);
 
         if (!Console.IsInputRedirected)
         {
             Console.ReadKey();
         }
     }
+
+    private static void InitializeMazeInfo()
+    {
+        _width = Labyrinth[0].Length;
+        _height = Labyrinth.Length;
+        _start = new Box(0, 1, 0);
+        _finish = new Box(_width - 1, _height - 2, 0);
+    }
+
+    private static void PrintLabyrinth()
+    {
+        if (!Console.IsOutputRedirected)
+        {
+            Console.Clear();
+        }
+
+        for (int y = 0; y < _height; y++)
+        {
+            Console.WriteLine(Labyrinth[y]);
+        }
+    }
+
+    private static int SearchShortestPath()
+    {
+        _visited = new bool[_width, _height];
+        _frontier = new Queue<Box>();
+
+        TryVisit(_start);
+
+        while (_frontier.Count > 0)
+        {
+            Box current = _frontier.Dequeue();
+
+            if (IsFinish(current))
+            {
+                _frontier.Clear();
+                return current.Step;
+            }
+
+            EnqueueNeighbors(current);
+        }
+
+        return -1;
+    }
+
+    private static void EnqueueNeighbors(Box current)
+    {
+        int nextStep = current.Step + 1;
+
+        foreach (var direction in Directions)
+        {
+            var next = new Box(current.X + direction.Dx, current.Y + direction.Dy, nextStep);
+            TryVisit(next);
+        }
+    }
+
+    private static void TryVisit(Box candidate)
+    {
+        if (!IsInside(candidate.X, candidate.Y))
+        {
+            return;
+        }
+
+        if (Labyrinth[candidate.Y][candidate.X] != ' ')
+        {
+            return;
+        }
+
+        if (_visited[candidate.X, candidate.Y])
+        {
+            return;
+        }
+
+        _visited[candidate.X, candidate.Y] = true;
+        _frontier.Enqueue(candidate);
+        PrintBox(candidate);
+    }
+
+    private static void PrintBox(Box box)
+    {
+        if (Console.IsOutputRedirected)
+        {
+            return;
+        }
+
+        Console.SetCursorPosition(box.X, box.Y);
+        Console.ForegroundColor = ConsoleColor.Cyan;
+
+        if (box.Step < 10)
+        {
+            Console.Write(box.Step);
+            return;
+        }
+
+        Console.Write((char)(65 + box.Step - 10));
+    }
+
+    private static bool IsFinish(Box box) => box.X == _finish.X && box.Y == _finish.Y;
+
+    private static bool IsInside(int x, int y) => x >= 0 && x < _width && y >= 0 && y < _height;
 }

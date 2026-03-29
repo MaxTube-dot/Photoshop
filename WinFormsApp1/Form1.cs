@@ -1,4 +1,4 @@
-﻿using System.Drawing.Imaging;
+using System.Drawing.Imaging;
 using WinFormsApp1.Services.ImageOperation;
 using WinFormsApp1.Services.ImagePipelineService;
 
@@ -6,6 +6,10 @@ namespace WinFormsApp1
 {
     public partial class Form1 : Form
     {
+        private const string OpenImageFilter = "Images|*.png;*.jpg;*.jpeg;*.bmp;*.gif|All files|*.*";
+        private const string SaveImageFilter = "PNG|*.png|JPEG|*.jpg;*.jpeg|BMP|*.bmp";
+        private const string DefaultResultFileName = "result.png";
+
         private Bitmap? _original;
         private Bitmap? _preview;
         private readonly IImagePipelineService _pipelineService = new ImagePipelineService();
@@ -16,39 +20,19 @@ namespace WinFormsApp1
         {
             InitializeComponent();
             ConfigureResponsiveLayout();
+            ConfigureEditorControls();
+            ApplyInitialSelections();
+            UpdateAllValueLabels();
 
-            pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
-            MinimumSize = new Size(980, 700);
-
-            tbBrightness.Minimum = -100;
-            tbBrightness.Maximum = 100;
-            tbBrightness.TickFrequency = 10;
-            tbBrightness.Value = 0;
-
-            contrastBar.Minimum = -100;
-            contrastBar.Maximum = 100;
-            contrastBar.TickFrequency = 10;
-            contrastBar.Value = 0;
-
-            gammaCor.Minimum = 10;
-            gammaCor.Maximum = 500;
-            gammaCor.TickFrequency = 10;
-            gammaCor.Value = 100;
-
-            scaleBar1.Minimum = 10;
-            scaleBar1.Maximum = 1100;
-            scaleBar1.TickFrequency = 10;
-            scaleBar1.Value = 100;
-
-            lblBrightness.Text = $"Яркость: {tbBrightness.Value}";
-            lbContrast.Text = $"Контраст: {contrastBar.Value}";
-            lbGamma.Text = $"Гамма: {GetGammaValue():0.00}";
-            lbScale.Text = $"Масштаб: {scaleBar1.Value}%";
-            correctionBox.SelectedIndex = (int)GradationCorrectionMode.Linear;
-            interpolationBox1.SelectedIndex = (int)ImageInterpolationMethod.NearestNeighbor;
             imagePanel.SizeChanged += imagePanel_SizeChanged;
             _isResponsiveLayoutReady = true;
         }
+
+        private readonly record struct PreviewRenderRequest(
+            IReadOnlyList<IImageOperation> Operations,
+            Size ViewportSize,
+            double ScaleMultiplier,
+            ImageInterpolationMethod InterpolationMethod);
 
         private void button1_Click(object sender, EventArgs e)
         {
@@ -58,68 +42,49 @@ namespace WinFormsApp1
 
         private void Form1_Load(object sender, EventArgs e)
         {
-
         }
 
         private void btnOpen_Click(object sender, EventArgs e)
         {
-            using var ofd = new OpenFileDialog
+            using var dialog = CreateOpenFileDialog();
+
+            if (dialog.ShowDialog() != DialogResult.OK)
             {
-                Filter = "Images|*.png;*.jpg;*.jpeg;*.bmp;*.gif|All files|*.*"
-            };
+                return;
+            }
 
-            if (ofd.ShowDialog() != DialogResult.OK) return;
-
-            // Важно: открываем без блокировки файла
-            using var tmp = new Bitmap(ofd.FileName);
-            _original?.Dispose();
-            _original = new Bitmap(tmp);
-
+            LoadOriginalImage(dialog.FileName);
             ApplyPipelineAndShow();
         }
 
         private async void ApplyPipelineAndShow()
         {
-            if (_original == null) return;
+            if (_original == null)
+            {
+                return;
+            }
 
             _renderCts?.Cancel();
             _renderCts = new CancellationTokenSource();
-            var token = _renderCts.Token;
-
-            var ops = BuildOperationsFromUi();
-            var viewportSize = imagePanel.ClientSize;
-            var scaleMultiplier = GetScaleFactor();
-            var interpolationMethod = GetInterpolationMethod();
+            CancellationToken token = _renderCts.Token;
+            PreviewRenderRequest request = CreatePreviewRenderRequest();
 
             try
             {
-                Bitmap newPreview = await Task.Run(() =>
-                {
-                    token.ThrowIfCancellationRequested();
-                    var rendered = _pipelineService.RenderByPixelsFast(_original, ops, token);
-                    var scaleFactor = GetPreviewScaleFactor(rendered.Size, viewportSize, scaleMultiplier);
-
-                    if (Math.Abs(scaleFactor - 1.0d) < double.Epsilon)
-                        return rendered;
-
-                    try
-                    {
-                        return _pipelineService.Resize(rendered, scaleFactor, interpolationMethod, token);
-                    }
-                    finally
-                    {
-                        rendered.Dispose();
-                    }
-                }, token);
+                Bitmap newPreview = await Task.Run(() => RenderPreview(request, token), token);
 
                 if (token.IsCancellationRequested)
+                {
                     return;
+                }
 
                 _preview?.Dispose();
                 _preview = newPreview;
                 SetPicture(_preview);
             }
-            catch (OperationCanceledException) { }
+            catch (OperationCanceledException)
+            {
+            }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message);
@@ -134,27 +99,75 @@ namespace WinFormsApp1
             old?.Dispose();
         }
 
+        private void LoadOriginalImage(string fileName)
+        {
+            using var loadedBitmap = new Bitmap(fileName);
+            _original?.Dispose();
+            _original = new Bitmap(loadedBitmap);
+        }
+
+        private PreviewRenderRequest CreatePreviewRenderRequest()
+        {
+            return new PreviewRenderRequest(
+                BuildOperationsFromUi(),
+                imagePanel.ClientSize,
+                GetScaleFactor(),
+                GetInterpolationMethod());
+        }
+
+        private Bitmap RenderPreview(PreviewRenderRequest request, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+
+            var rendered = _pipelineService.RenderByPixelsFast(_original!, request.Operations, token);
+            double previewScaleFactor = GetPreviewScaleFactor(rendered.Size, request.ViewportSize, request.ScaleMultiplier);
+
+            if (Math.Abs(previewScaleFactor - 1.0d) < double.Epsilon)
+            {
+                return rendered;
+            }
+
+            try
+            {
+                return _pipelineService.Resize(rendered, previewScaleFactor, request.InterpolationMethod, token);
+            }
+            finally
+            {
+                rendered.Dispose();
+            }
+        }
+
         private List<IImageOperation> BuildOperationsFromUi()
         {
-            var ops = new List<IImageOperation>();
+            var operations = new List<IImageOperation>();
 
             if (cbGrayscale.Checked)
-                ops.Add(new GrayscaleOperation());
+            {
+                operations.Add(new GrayscaleOperation());
+            }
 
             if (tbBrightness.Value != 0)
-                ops.Add(new BrightnessOperation(tbBrightness.Value));
+            {
+                operations.Add(new BrightnessOperation(tbBrightness.Value));
+            }
 
             if (contrastBar.Value != 0)
-                ops.Add(new ContrastOperation(contrastBar.Value));
+            {
+                operations.Add(new ContrastOperation(contrastBar.Value));
+            }
 
             double gamma = GetGammaValue();
-            if (Math.Abs(gamma - 1.0) > double.Epsilon)
-                ops.Add(new GammaCorrectionOperation(gamma));
+            if (Math.Abs(gamma - 1.0d) > double.Epsilon)
+            {
+                operations.Add(new GammaCorrectionOperation(gamma));
+            }
 
             if (TryGetGradationCorrectionMode(out var correctionMode))
-                ops.Add(new GradationCorrectionOperation(correctionMode));
+            {
+                operations.Add(new GradationCorrectionOperation(correctionMode));
+            }
 
-            return ops;
+            return operations;
         }
 
         private bool TryGetGradationCorrectionMode(out GradationCorrectionMode mode)
@@ -162,29 +175,29 @@ namespace WinFormsApp1
             mode = GradationCorrectionMode.Linear;
 
             if (correctionBox.SelectedIndex < 0)
+            {
                 return false;
+            }
 
             if (!Enum.IsDefined(typeof(GradationCorrectionMode), correctionBox.SelectedIndex))
+            {
                 return false;
+            }
 
             mode = (GradationCorrectionMode)correctionBox.SelectedIndex;
             return mode != GradationCorrectionMode.Linear;
         }
 
-        private double GetGammaValue()
-        {
-            return gammaCor.Value / 100d;
-        }
+        private double GetGammaValue() => gammaCor.Value / 100d;
 
-        private double GetScaleFactor()
-        {
-            return scaleBar1.Value / 100d;
-        }
+        private double GetScaleFactor() => scaleBar1.Value / 100d;
 
         private ImageInterpolationMethod GetInterpolationMethod()
         {
             if (!Enum.IsDefined(typeof(ImageInterpolationMethod), interpolationBox1.SelectedIndex))
+            {
                 return ImageInterpolationMethod.NearestNeighbor;
+            }
 
             return (ImageInterpolationMethod)interpolationBox1.SelectedIndex;
         }
@@ -192,10 +205,14 @@ namespace WinFormsApp1
         private static double GetPreviewScaleFactor(Size imageSize, Size viewportSize, double scaleMultiplier)
         {
             if (imageSize.Width <= 0 || imageSize.Height <= 0)
+            {
                 return scaleMultiplier;
+            }
 
             if (viewportSize.Width <= 0 || viewportSize.Height <= 0)
+            {
                 return scaleMultiplier;
+            }
 
             double fitScaleX = viewportSize.Width / (double)imageSize.Width;
             double fitScaleY = viewportSize.Height / (double)imageSize.Height;
@@ -218,20 +235,14 @@ namespace WinFormsApp1
                 return;
             }
 
-            using var sfd = new SaveFileDialog
+            using var dialog = CreateSaveFileDialog();
+
+            if (dialog.ShowDialog() != DialogResult.OK)
             {
-                Filter = "PNG|*.png|JPEG|*.jpg;*.jpeg|BMP|*.bmp",
-                FileName = "result.png"
-            };
+                return;
+            }
 
-            if (sfd.ShowDialog() != DialogResult.OK) return;
-
-            ImageFormat format = ImageFormat.Png;
-            string ext = Path.GetExtension(sfd.FileName).ToLowerInvariant();
-            if (ext == ".jpg" || ext == ".jpeg") format = ImageFormat.Jpeg;
-            else if (ext == ".bmp") format = ImageFormat.Bmp;
-
-            _preview.Save(sfd.FileName, format);
+            _preview.Save(dialog.FileName, ResolveImageFormat(dialog.FileName));
         }
 
         private void cbGrayscale_CheckedChanged(object sender, EventArgs e)
@@ -241,23 +252,23 @@ namespace WinFormsApp1
 
         private void tbBrightness_Scroll(object sender, EventArgs e)
         {
-            lblBrightness.Text = $"Яркость: {tbBrightness.Value}";
+            UpdateBrightnessLabel();
         }
 
         private void tbBrightness_MouseUp(object sender, MouseEventArgs e)
         {
-            lblBrightness.Text = $"Яркость: {tbBrightness.Value}";
+            UpdateBrightnessLabel();
             ApplyPipelineAndShow();
         }
 
         private void contrastBar_Scroll(object sender, EventArgs e)
         {
-            lbContrast.Text = $"Контраст: {contrastBar.Value}";
+            UpdateContrastLabel();
         }
 
         private void contrastBar_MouseUp(object sender, MouseEventArgs e)
         {
-            lbContrast.Text = $"Контраст: {contrastBar.Value}";
+            UpdateContrastLabel();
             ApplyPipelineAndShow();
         }
 
@@ -268,39 +279,131 @@ namespace WinFormsApp1
 
         private void gammaCor_Scroll(object sender, EventArgs e)
         {
-            lbGamma.Text = $"Гамма: {GetGammaValue():0.00}";
+            UpdateGammaLabel();
         }
 
         private void gammaCor_MouseUp(object sender, MouseEventArgs e)
         {
-            lbGamma.Text = $"Гамма: {GetGammaValue():0.00}";
+            UpdateGammaLabel();
             ApplyPipelineAndShow();
         }
 
         private void scaleBar1_Scroll(object sender, EventArgs e)
         {
-            lbScale.Text = $"Масштаб: {scaleBar1.Value}%";
+            UpdateScaleLabel();
         }
 
         private void scaleBar1_MouseUp(object sender, MouseEventArgs e)
         {
-            lbScale.Text = $"Масштаб: {scaleBar1.Value}%";
+            UpdateScaleLabel();
             ApplyPipelineAndShow();
         }
 
         private void lbScale_Click(object sender, EventArgs e)
         {
-
         }
 
         private void label2_Click(object sender, EventArgs e)
         {
-
         }
 
         private void interpolationBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
             ApplyPipelineAndShow();
+        }
+
+        private void ConfigureEditorControls()
+        {
+            pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
+            MinimumSize = new Size(980, 700);
+
+            tbBrightness.Minimum = -100;
+            tbBrightness.Maximum = 100;
+            tbBrightness.TickFrequency = 10;
+            tbBrightness.Value = 0;
+
+            contrastBar.Minimum = -100;
+            contrastBar.Maximum = 100;
+            contrastBar.TickFrequency = 10;
+            contrastBar.Value = 0;
+
+            gammaCor.Minimum = 10;
+            gammaCor.Maximum = 500;
+            gammaCor.TickFrequency = 10;
+            gammaCor.Value = 100;
+
+            scaleBar1.Minimum = 10;
+            scaleBar1.Maximum = 1100;
+            scaleBar1.TickFrequency = 10;
+            scaleBar1.Value = 100;
+        }
+
+        private void ApplyInitialSelections()
+        {
+            correctionBox.SelectedIndex = (int)GradationCorrectionMode.Linear;
+            interpolationBox1.SelectedIndex = (int)ImageInterpolationMethod.NearestNeighbor;
+        }
+
+        private void UpdateAllValueLabels()
+        {
+            UpdateBrightnessLabel();
+            UpdateContrastLabel();
+            UpdateGammaLabel();
+            UpdateScaleLabel();
+        }
+
+        private void UpdateBrightnessLabel()
+        {
+            lblBrightness.Text = $"Яркость: {tbBrightness.Value}";
+        }
+
+        private void UpdateContrastLabel()
+        {
+            lbContrast.Text = $"Контраст: {contrastBar.Value}";
+        }
+
+        private void UpdateGammaLabel()
+        {
+            lbGamma.Text = $"Гамма: {GetGammaValue():0.00}";
+        }
+
+        private void UpdateScaleLabel()
+        {
+            lbScale.Text = $"Масштаб: {scaleBar1.Value}%";
+        }
+
+        private static OpenFileDialog CreateOpenFileDialog()
+        {
+            return new OpenFileDialog
+            {
+                Filter = OpenImageFilter
+            };
+        }
+
+        private static SaveFileDialog CreateSaveFileDialog()
+        {
+            return new SaveFileDialog
+            {
+                Filter = SaveImageFilter,
+                FileName = DefaultResultFileName
+            };
+        }
+
+        private static ImageFormat ResolveImageFormat(string fileName)
+        {
+            string ext = Path.GetExtension(fileName).ToLowerInvariant();
+
+            if (ext == ".jpg" || ext == ".jpeg")
+            {
+                return ImageFormat.Jpeg;
+            }
+
+            if (ext == ".bmp")
+            {
+                return ImageFormat.Bmp;
+            }
+
+            return ImageFormat.Png;
         }
 
         private void ConfigureResponsiveLayout()
@@ -428,7 +531,9 @@ namespace WinFormsApp1
         private void imagePanel_SizeChanged(object? sender, EventArgs e)
         {
             if (!_isResponsiveLayoutReady || _original == null)
+            {
                 return;
+            }
 
             ApplyPipelineAndShow();
         }
