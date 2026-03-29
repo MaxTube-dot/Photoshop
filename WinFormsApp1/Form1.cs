@@ -15,7 +15,7 @@ namespace WinFormsApp1
         {
             InitializeComponent();
 
-            pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
+            pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
 
             tbBrightness.Minimum = -100;
             tbBrightness.Maximum = 100;
@@ -32,10 +32,17 @@ namespace WinFormsApp1
             gammaCor.TickFrequency = 10;
             gammaCor.Value = 100;
 
+            scaleBar1.Minimum = 10;
+            scaleBar1.Maximum = 1100;
+            scaleBar1.TickFrequency = 10;
+            scaleBar1.Value = 100;
+
             lblBrightness.Text = $"Яркость: {tbBrightness.Value}";
             lbContrast.Text = $"Контраст: {contrastBar.Value}";
             lbGamma.Text = $"Гамма: {GetGammaValue():0.00}";
+            lbScale.Text = $"Масштаб: {scaleBar1.Value}%";
             correctionBox.SelectedIndex = (int)GradationCorrectionMode.Linear;
+            interpolationBox1.SelectedIndex = (int)ImageInterpolationMethod.NearestNeighbor;
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -75,13 +82,29 @@ namespace WinFormsApp1
             var token = _renderCts.Token;
 
             var ops = BuildOperationsFromUi();
+            var viewportSize = imagePanel.ClientSize;
+            var scaleMultiplier = GetScaleFactor();
+            var interpolationMethod = GetInterpolationMethod();
 
             try
             {
                 Bitmap newPreview = await Task.Run(() =>
                 {
                     token.ThrowIfCancellationRequested();
-                    return _pipelineService.RenderByPixelsFast(_original, ops, token);
+                    var rendered = _pipelineService.RenderByPixelsFast(_original, ops, token);
+                    var scaleFactor = GetPreviewScaleFactor(rendered.Size, viewportSize, scaleMultiplier);
+
+                    if (Math.Abs(scaleFactor - 1.0d) < double.Epsilon)
+                        return rendered;
+
+                    try
+                    {
+                        return _pipelineService.Resize(rendered, scaleFactor, interpolationMethod, token);
+                    }
+                    finally
+                    {
+                        rendered.Dispose();
+                    }
                 }, token);
 
                 if (token.IsCancellationRequested)
@@ -102,6 +125,7 @@ namespace WinFormsApp1
         {
             var old = pictureBox1.Image;
             pictureBox1.Image = bmp;
+            pictureBox1.Size = bmp.Size;
             old?.Dispose();
         }
 
@@ -145,6 +169,34 @@ namespace WinFormsApp1
         private double GetGammaValue()
         {
             return gammaCor.Value / 100d;
+        }
+
+        private double GetScaleFactor()
+        {
+            return scaleBar1.Value / 100d;
+        }
+
+        private ImageInterpolationMethod GetInterpolationMethod()
+        {
+            if (!Enum.IsDefined(typeof(ImageInterpolationMethod), interpolationBox1.SelectedIndex))
+                return ImageInterpolationMethod.NearestNeighbor;
+
+            return (ImageInterpolationMethod)interpolationBox1.SelectedIndex;
+        }
+
+        private static double GetPreviewScaleFactor(Size imageSize, Size viewportSize, double scaleMultiplier)
+        {
+            if (imageSize.Width <= 0 || imageSize.Height <= 0)
+                return scaleMultiplier;
+
+            if (viewportSize.Width <= 0 || viewportSize.Height <= 0)
+                return scaleMultiplier;
+
+            double fitScaleX = viewportSize.Width / (double)imageSize.Width;
+            double fitScaleY = viewportSize.Height / (double)imageSize.Height;
+            double fitScale = Math.Min(fitScaleX, fitScaleY);
+
+            return fitScale * scaleMultiplier;
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
@@ -217,6 +269,32 @@ namespace WinFormsApp1
         private void gammaCor_MouseUp(object sender, MouseEventArgs e)
         {
             lbGamma.Text = $"Гамма: {GetGammaValue():0.00}";
+            ApplyPipelineAndShow();
+        }
+
+        private void scaleBar1_Scroll(object sender, EventArgs e)
+        {
+            lbScale.Text = $"Масштаб: {scaleBar1.Value}%";
+        }
+
+        private void scaleBar1_MouseUp(object sender, MouseEventArgs e)
+        {
+            lbScale.Text = $"Масштаб: {scaleBar1.Value}%";
+            ApplyPipelineAndShow();
+        }
+
+        private void lbScale_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label2_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void interpolationBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
             ApplyPipelineAndShow();
         }
     }

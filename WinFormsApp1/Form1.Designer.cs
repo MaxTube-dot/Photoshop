@@ -30,6 +30,7 @@
         {
             btnOpen = new Button();
             btnSave = new Button();
+            imagePanel = new Panel();
             pictureBox1 = new PictureBox();
             cbGrayscale = new CheckBox();
             tbBrightness = new TrackBar();
@@ -40,10 +41,16 @@
             label1 = new Label();
             lbGamma = new Label();
             gammaCor = new TrackBar();
+            lbScale = new Label();
+            scaleBar1 = new TrackBar();
+            interpolationBox1 = new ComboBox();
+            label2 = new Label();
+            imagePanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)tbBrightness).BeginInit();
             ((System.ComponentModel.ISupportInitialize)contrastBar).BeginInit();
             ((System.ComponentModel.ISupportInitialize)gammaCor).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)scaleBar1).BeginInit();
             SuspendLayout();
             // 
             // btnOpen
@@ -66,9 +73,19 @@
             btnSave.UseVisualStyleBackColor = true;
             btnSave.Click += btnSave_Click;
             // 
+            // imagePanel
+            // 
+            imagePanel.AutoScroll = true;
+            imagePanel.BorderStyle = BorderStyle.FixedSingle;
+            imagePanel.Controls.Add(pictureBox1);
+            imagePanel.Location = new Point(12, 41);
+            imagePanel.Name = "imagePanel";
+            imagePanel.Size = new Size(665, 394);
+            imagePanel.TabIndex = 2;
+            // 
             // pictureBox1
             // 
-            pictureBox1.Location = new Point(12, 41);
+            pictureBox1.Location = new Point(0, 0);
             pictureBox1.Name = "pictureBox1";
             pictureBox1.Size = new Size(665, 394);
             pictureBox1.TabIndex = 2;
@@ -159,11 +176,56 @@
             gammaCor.Scroll += gammaCor_Scroll;
             gammaCor.MouseUp += gammaCor_MouseUp;
             // 
+            // lbScale
+            // 
+            lbScale.AutoSize = true;
+            lbScale.Location = new Point(684, 329);
+            lbScale.Name = "lbScale";
+            lbScale.Size = new Size(59, 15);
+            lbScale.TabIndex = 12;
+            lbScale.Text = "Масштаб";
+            lbScale.Click += lbScale_Click;
+            // 
+            // scaleBar1
+            // 
+            scaleBar1.Location = new Point(684, 347);
+            scaleBar1.Maximum = 30;
+            scaleBar1.Name = "scaleBar1";
+            scaleBar1.Size = new Size(183, 45);
+            scaleBar1.TabIndex = 13;
+            scaleBar1.Scroll += scaleBar1_Scroll;
+            scaleBar1.MouseUp += scaleBar1_MouseUp;
+            // 
+            // interpolationBox1
+            // 
+            interpolationBox1.AutoCompleteCustomSource.AddRange(new string[] { "Линейная", "Синусоидальная", "Экспоненциальная", "Логарифмическая" });
+            interpolationBox1.FormattingEnabled = true;
+            interpolationBox1.Items.AddRange(new object[] { "Метод ближайшего соседа", "Билинейная интерполяция" });
+            interpolationBox1.Location = new Point(683, 416);
+            interpolationBox1.Name = "interpolationBox1";
+            interpolationBox1.Size = new Size(183, 23);
+            interpolationBox1.TabIndex = 14;
+            interpolationBox1.SelectedIndexChanged += interpolationBox1_SelectedIndexChanged;
+            // 
+            // label2
+            // 
+            label2.AutoSize = true;
+            label2.Location = new Point(684, 395);
+            label2.Name = "label2";
+            label2.Size = new Size(125, 15);
+            label2.TabIndex = 15;
+            label2.Text = "Метод интерполяции";
+            label2.Click += label2_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(889, 619);
+            Controls.Add(label2);
+            Controls.Add(interpolationBox1);
+            Controls.Add(scaleBar1);
+            Controls.Add(lbScale);
             Controls.Add(lbGamma);
             Controls.Add(gammaCor);
             Controls.Add(label1);
@@ -173,22 +235,25 @@
             Controls.Add(lblBrightness);
             Controls.Add(tbBrightness);
             Controls.Add(cbGrayscale);
-            Controls.Add(pictureBox1);
+            Controls.Add(imagePanel);
             Controls.Add(btnSave);
             Controls.Add(btnOpen);
             Name = "Form1";
             Text = "Form1";
             Load += Form1_Load;
+            imagePanel.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
             ((System.ComponentModel.ISupportInitialize)tbBrightness).EndInit();
             ((System.ComponentModel.ISupportInitialize)contrastBar).EndInit();
             ((System.ComponentModel.ISupportInitialize)gammaCor).EndInit();
+            ((System.ComponentModel.ISupportInitialize)scaleBar1).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
 
         #endregion
 
+        private Panel imagePanel;
         private PictureBox pictureBox1;
         private MenuStrip menuStrip1;
         private ToolStripMenuItem менюToolStripMenuItem;
@@ -206,5 +271,9 @@
         private Label label1;
         private Label lbGamma;
         private TrackBar gammaCor;
+        private Label lbScale;
+        private TrackBar scaleBar1;
+        private ComboBox interpolationBox1;
+        private Label label2;
     }
 }
