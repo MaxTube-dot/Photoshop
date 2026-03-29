@@ -2,44 +2,53 @@ namespace SingleNeuronConsole;
 
 public class Neuron
 {
-    // Simplified educational example of one neuron with one weight.
-    public decimal weight = 0.5m;
+    private const decimal InitialWeight = 0.5m;
+    private const decimal ZeroValue = 0m;
+
+    public decimal weight { get; private set; } = InitialWeight;
     public decimal lastError { get; private set; }
     public decimal Smoothing { get; set; } = 0.02m;
     public decimal Tolerance { get; set; } = 0.000001m;
-    public decimal actualRes;
+    public decimal actualRes { get; private set; }
 
-    public decimal ProcInput(decimal input)
-    {
-        return input * weight;
-    }
+    public decimal ProcInput(decimal input) => input * weight;
 
     public decimal ProcOutput(decimal output)
     {
-        if (weight == 0m)
-        {
-            throw new InvalidOperationException("Reverse conversion is not possible when weight is zero.");
-        }
-
+        EnsureReverseConversionIsAvailable();
         return output / weight;
     }
 
     public void Learn(decimal input, decimal expectedRes)
     {
-        actualRes = ProcInput(input);
-        lastError = expectedRes - actualRes;
+        UpdateState(input, expectedRes);
 
-        if (input == 0m)
+        if (input == ZeroValue)
         {
             return;
         }
 
-        // Use Smoothing as a learning rate so the weight changes gradually
-        // and the convergence can be seen over multiple iterations.
-        decimal correction = (lastError / input) * Smoothing;
-        weight += correction;
+        weight = GetAdjustedWeight(input);
+        UpdateState(input, expectedRes);
+    }
 
+    private decimal GetAdjustedWeight(decimal input)
+    {
+        decimal learningStep = (lastError / input) * Smoothing;
+        return weight + learningStep;
+    }
+
+    private void UpdateState(decimal input, decimal expectedRes)
+    {
         actualRes = ProcInput(input);
         lastError = expectedRes - actualRes;
+    }
+
+    private void EnsureReverseConversionIsAvailable()
+    {
+        if (weight == ZeroValue)
+        {
+            throw new InvalidOperationException("Reverse conversion is not possible when weight is zero.");
+        }
     }
 }
