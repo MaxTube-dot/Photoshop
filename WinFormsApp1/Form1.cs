@@ -1,4 +1,4 @@
-using System.Drawing.Imaging;
+п»їusing System.Drawing.Imaging;
 using WinFormsApp1.Services.ImageOperation;
 using WinFormsApp1.Services.ImagePipelineService;
 
@@ -22,10 +22,14 @@ namespace WinFormsApp1
             tbBrightness.TickFrequency = 10;
             tbBrightness.Value = 0;
 
-            lblBrightness.Text = $"Яркость: {tbBrightness.Value}";
+            contrastBar.Minimum = -100;
+            contrastBar.Maximum = 100;
+            contrastBar.TickFrequency = 10;
+            contrastBar.Value = 0;
+
+            lblBrightness.Text = $"РЇСЂРєРѕСЃС‚СЊ: {tbBrightness.Value}";
+            lbContrast.Text = $"РљРѕРЅС‚СЂР°СЃС‚: {contrastBar.Value}";
         }
-
-
 
         private void button1_Click(object sender, EventArgs e)
         {
@@ -47,7 +51,7 @@ namespace WinFormsApp1
 
             if (ofd.ShowDialog() != DialogResult.OK) return;
 
-            // Важно: открываем без блокировки файла
+            // Р’Р°Р¶РЅРѕ: РѕС‚РєСЂС‹РІР°РµРј Р±РµР· Р±Р»РѕРєРёСЂРѕРІРєРё С„Р°Р№Р»Р°
             using var tmp = new Bitmap(ofd.FileName);
             _original?.Dispose();
             _original = new Bitmap(tmp);
@@ -67,10 +71,10 @@ namespace WinFormsApp1
 
             try
             {
-                Bitmap newPreview = await Task.Run(async () =>
+                Bitmap newPreview = await Task.Run(() =>
                 {
                     token.ThrowIfCancellationRequested();
-                    return _pipelineService.RenderByPixelsFast(_original, ops);
+                    return _pipelineService.RenderByPixelsFast(_original, ops, token);
                 }, token);
 
                 if (token.IsCancellationRequested)
@@ -104,6 +108,9 @@ namespace WinFormsApp1
             if (tbBrightness.Value != 0)
                 ops.Add(new BrightnessOperation(tbBrightness.Value));
 
+            if (contrastBar.Value != 0)
+                ops.Add(new ContrastOperation(contrastBar.Value));
+
             return ops;
         }
 
@@ -117,7 +124,7 @@ namespace WinFormsApp1
         {
             if (_preview == null)
             {
-                MessageBox.Show("Нечего сохранять. Сначала откройте изображение.");
+                MessageBox.Show("РќРµС‡РµРіРѕ СЃРѕС…СЂР°РЅСЏС‚СЊ. РЎРЅР°С‡Р°Р»Р° РѕС‚РєСЂРѕР№С‚Рµ РёР·РѕР±СЂР°Р¶РµРЅРёРµ.");
                 return;
             }
 
@@ -144,13 +151,29 @@ namespace WinFormsApp1
 
         private void tbBrightness_Scroll(object sender, EventArgs e)
         {
-
+            lblBrightness.Text = $"РЇСЂРєРѕСЃС‚СЊ: {tbBrightness.Value}";
         }
 
         private void tbBrightness_MouseUp(object sender, MouseEventArgs e)
         {
-            lblBrightness.Text = $"Яркость: {tbBrightness.Value}";
+            lblBrightness.Text = $"РЇСЂРєРѕСЃС‚СЊ: {tbBrightness.Value}";
             ApplyPipelineAndShow();
+        }
+
+        private void contrastBar_Scroll(object sender, EventArgs e)
+        {
+            lbContrast.Text = $"РљРѕРЅС‚СЂР°СЃС‚: {contrastBar.Value}";
+        }
+
+        private void contrastBar_MouseUp(object sender, MouseEventArgs e)
+        {
+            lbContrast.Text = $"РљРѕРЅС‚СЂР°СЃС‚: {contrastBar.Value}";
+            ApplyPipelineAndShow();
+        }
+
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
         }
     }
 }

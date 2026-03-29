@@ -34,8 +34,13 @@
             cbGrayscale = new CheckBox();
             tbBrightness = new TrackBar();
             lblBrightness = new Label();
+            contrastBar = new TrackBar();
+            lbContrast = new Label();
+            comboBox1 = new ComboBox();
+            label1 = new Label();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             ((System.ComponentModel.ISupportInitialize)tbBrightness).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)contrastBar).BeginInit();
             SuspendLayout();
             // 
             // btnOpen
@@ -71,9 +76,9 @@
             cbGrayscale.AutoSize = true;
             cbGrayscale.Location = new Point(683, 113);
             cbGrayscale.Name = "cbGrayscale";
-            cbGrayscale.Size = new Size(60, 19);
+            cbGrayscale.Size = new Size(117, 19);
             cbGrayscale.TabIndex = 3;
-            cbGrayscale.Text = "Серое";
+            cbGrayscale.Text = "Градиент серого";
             cbGrayscale.UseVisualStyleBackColor = true;
             cbGrayscale.CheckedChanged += cbGrayscale_CheckedChanged;
             // 
@@ -89,17 +94,59 @@
             // lblBrightness
             // 
             lblBrightness.AutoSize = true;
-            lblBrightness.Location = new Point(762, 41);
+            lblBrightness.Location = new Point(683, 44);
             lblBrightness.Name = "lblBrightness";
-            lblBrightness.Size = new Size(38, 15);
+            lblBrightness.Size = new Size(51, 15);
             lblBrightness.TabIndex = 5;
-            lblBrightness.Text = "label1";
+            lblBrightness.Text = "Яркость";
+            // 
+            // contrastBar
+            // 
+            contrastBar.Location = new Point(683, 159);
+            contrastBar.Name = "contrastBar";
+            contrastBar.Size = new Size(183, 45);
+            contrastBar.TabIndex = 6;
+            contrastBar.Scroll += contrastBar_Scroll;
+            contrastBar.MouseUp += contrastBar_MouseUp;
+            // 
+            // lbContrast
+            // 
+            lbContrast.AutoSize = true;
+            lbContrast.Location = new Point(683, 141);
+            lbContrast.Name = "lbContrast";
+            lbContrast.Size = new Size(88, 15);
+            lbContrast.TabIndex = 7;
+            lbContrast.Text = "Контрастность";
+            // 
+            // comboBox1
+            // 
+            comboBox1.AutoCompleteCustomSource.AddRange(new string[] { "Линейная", "Синусоидальная", "Экспоненциальная", "Логарифмическая" });
+            comboBox1.FormattingEnabled = true;
+            comboBox1.Items.AddRange(new object[] { "Линейная", "Синусоидальная", "Экспоненциальная", "Логирифмическая" });
+            comboBox1.Location = new Point(683, 225);
+            comboBox1.Name = "comboBox1";
+            comboBox1.Size = new Size(183, 23);
+            comboBox1.TabIndex = 8;
+            comboBox1.SelectedIndexChanged += comboBox1_SelectedIndexChanged;
+            // 
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.Location = new Point(683, 207);
+            label1.Name = "label1";
+            label1.Size = new Size(67, 15);
+            label1.TabIndex = 9;
+            label1.Text = "Коррекция";
             // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(889, 619);
+            Controls.Add(label1);
+            Controls.Add(comboBox1);
+            Controls.Add(lbContrast);
+            Controls.Add(contrastBar);
             Controls.Add(lblBrightness);
             Controls.Add(tbBrightness);
             Controls.Add(cbGrayscale);
@@ -111,6 +158,7 @@
             Load += Form1_Load;
             ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
             ((System.ComponentModel.ISupportInitialize)tbBrightness).EndInit();
+            ((System.ComponentModel.ISupportInitialize)contrastBar).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -128,5 +176,9 @@
         private CheckBox cbGrayscale;
         private TrackBar tbBrightness;
         private Label lblBrightness;
+        private TrackBar contrastBar;
+        private Label lbContrast;
+        private ComboBox comboBox1;
+        private Label label1;
     }
 }
