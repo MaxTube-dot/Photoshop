@@ -10,12 +10,15 @@ namespace WinFormsApp1
         private Bitmap? _preview;
         private readonly IImagePipelineService _pipelineService = new ImagePipelineService();
         private CancellationTokenSource? _renderCts;
+        private bool _isResponsiveLayoutReady;
 
         public Form1()
         {
             InitializeComponent();
+            ConfigureResponsiveLayout();
 
             pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
+            MinimumSize = new Size(980, 700);
 
             tbBrightness.Minimum = -100;
             tbBrightness.Maximum = 100;
@@ -43,6 +46,8 @@ namespace WinFormsApp1
             lbScale.Text = $"Масштаб: {scaleBar1.Value}%";
             correctionBox.SelectedIndex = (int)GradationCorrectionMode.Linear;
             interpolationBox1.SelectedIndex = (int)ImageInterpolationMethod.NearestNeighbor;
+            imagePanel.SizeChanged += imagePanel_SizeChanged;
+            _isResponsiveLayoutReady = true;
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -295,6 +300,136 @@ namespace WinFormsApp1
 
         private void interpolationBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
+            ApplyPipelineAndShow();
+        }
+
+        private void ConfigureResponsiveLayout()
+        {
+            SuspendLayout();
+
+            var toolbarPanel = new FlowLayoutPanel
+            {
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                Margin = Padding.Empty,
+                Padding = Padding.Empty,
+                WrapContents = false
+            };
+
+            var contentLayout = new TableLayoutPanel
+            {
+                ColumnCount = 2,
+                Dock = DockStyle.Fill,
+                Margin = Padding.Empty,
+                Padding = Padding.Empty,
+                RowCount = 1
+            };
+            contentLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 72F));
+            contentLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 28F));
+            contentLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+            var settingsLayout = CreateSettingsLayout();
+
+            var mainLayout = new TableLayoutPanel
+            {
+                ColumnCount = 1,
+                Dock = DockStyle.Fill,
+                Margin = Padding.Empty,
+                Padding = new Padding(12),
+                RowCount = 2
+            };
+            mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+            btnOpen.AutoSize = true;
+            btnSave.AutoSize = true;
+            btnOpen.Margin = new Padding(0, 0, 8, 0);
+            btnSave.Margin = Padding.Empty;
+
+            imagePanel.Dock = DockStyle.Fill;
+            imagePanel.Margin = new Padding(0, 0, 12, 0);
+
+            toolbarPanel.Controls.Add(btnOpen);
+            toolbarPanel.Controls.Add(btnSave);
+
+            contentLayout.Controls.Add(imagePanel, 0, 0);
+            contentLayout.Controls.Add(settingsLayout, 1, 0);
+
+            mainLayout.Controls.Add(toolbarPanel, 0, 0);
+            mainLayout.Controls.Add(contentLayout, 0, 1);
+
+            Controls.Add(mainLayout);
+
+            ResumeLayout(true);
+        }
+
+        private TableLayoutPanel CreateSettingsLayout()
+        {
+            var settingsLayout = new TableLayoutPanel
+            {
+                AutoScroll = true,
+                ColumnCount = 1,
+                Dock = DockStyle.Fill,
+                Margin = Padding.Empty,
+                Padding = Padding.Empty
+            };
+            settingsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+
+            ConfigureSettingsControl(lblBrightness, new Padding(0, 0, 0, 4));
+            ConfigureSettingsControl(tbBrightness, new Padding(0, 0, 0, 12));
+            ConfigureSettingsControl(cbGrayscale, new Padding(0, 0, 0, 12));
+            ConfigureSettingsControl(lbContrast, new Padding(0, 0, 0, 4));
+            ConfigureSettingsControl(contrastBar, new Padding(0, 0, 0, 12));
+            ConfigureSettingsControl(label1, new Padding(0, 0, 0, 4));
+            ConfigureSettingsControl(correctionBox, new Padding(0, 0, 0, 12));
+            ConfigureSettingsControl(lbGamma, new Padding(0, 0, 0, 4));
+            ConfigureSettingsControl(gammaCor, new Padding(0, 0, 0, 12));
+            ConfigureSettingsControl(lbScale, new Padding(0, 0, 0, 4));
+            ConfigureSettingsControl(scaleBar1, new Padding(0, 0, 0, 12));
+            ConfigureSettingsControl(label2, new Padding(0, 0, 0, 4));
+            ConfigureSettingsControl(interpolationBox1, Padding.Empty);
+
+            AddSettingsRow(settingsLayout, lblBrightness, SizeType.AutoSize, 0);
+            AddSettingsRow(settingsLayout, tbBrightness, SizeType.Absolute, 45F);
+            AddSettingsRow(settingsLayout, cbGrayscale, SizeType.AutoSize, 0);
+            AddSettingsRow(settingsLayout, lbContrast, SizeType.AutoSize, 0);
+            AddSettingsRow(settingsLayout, contrastBar, SizeType.Absolute, 45F);
+            AddSettingsRow(settingsLayout, label1, SizeType.AutoSize, 0);
+            AddSettingsRow(settingsLayout, correctionBox, SizeType.AutoSize, 0);
+            AddSettingsRow(settingsLayout, lbGamma, SizeType.AutoSize, 0);
+            AddSettingsRow(settingsLayout, gammaCor, SizeType.Absolute, 45F);
+            AddSettingsRow(settingsLayout, lbScale, SizeType.AutoSize, 0);
+            AddSettingsRow(settingsLayout, scaleBar1, SizeType.Absolute, 45F);
+            AddSettingsRow(settingsLayout, label2, SizeType.AutoSize, 0);
+            AddSettingsRow(settingsLayout, interpolationBox1, SizeType.AutoSize, 0);
+
+            settingsLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            settingsLayout.RowCount++;
+
+            return settingsLayout;
+        }
+
+        private static void ConfigureSettingsControl(Control control, Padding margin)
+        {
+            control.Dock = DockStyle.Fill;
+            control.Margin = margin;
+        }
+
+        private static void AddSettingsRow(TableLayoutPanel layout, Control control, SizeType sizeType, float size)
+        {
+            layout.RowStyles.Add(new RowStyle(sizeType, size));
+            layout.Controls.Add(control, 0, layout.RowCount);
+            layout.RowCount++;
+        }
+
+        private void imagePanel_SizeChanged(object? sender, EventArgs e)
+        {
+            if (!_isResponsiveLayoutReady || _original == null)
+                return;
+
             ApplyPipelineAndShow();
         }
     }
