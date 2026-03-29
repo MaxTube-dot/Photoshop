@@ -67,7 +67,7 @@ namespace WinFormsApp1.Services.ImageOperation
         {
             if (Mode == GradationCorrectionMode.Linear)
             {
-                return (byte)LinearCorrection(channel);
+                return (byte)channel;
             }
 
             if (Mode == GradationCorrectionMode.Sinusoidal)
@@ -81,16 +81,6 @@ namespace WinFormsApp1.Services.ImageOperation
             }
 
             return (byte)LogarithmicCorrection(channel);
-        }
-
-        private int LinearCorrection(int color)
-        {
-            double result = 1.2 * color + 10;
-
-            if (result < 0) result = 0;
-            if (result > 255) result = 255;
-
-            return Convert.ToInt32(result);
         }
 
         private int SinusoidalCorrection(int color)

@@ -35,7 +35,7 @@ namespace WinFormsApp1
             lblBrightness.Text = $"Яркость: {tbBrightness.Value}";
             lbContrast.Text = $"Контраст: {contrastBar.Value}";
             lbGamma.Text = $"Гамма: {GetGammaValue():0.00}";
-            correctionBox.SelectedIndex = -1;
+            correctionBox.SelectedIndex = (int)GradationCorrectionMode.Linear;
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -139,7 +139,7 @@ namespace WinFormsApp1
                 return false;
 
             mode = (GradationCorrectionMode)correctionBox.SelectedIndex;
-            return true;
+            return mode != GradationCorrectionMode.Linear;
         }
 
         private double GetGammaValue()
